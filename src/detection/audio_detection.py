@@ -2,8 +2,10 @@ import pyaudio
 import numpy as np
 import threading
 from collections import deque
-import whisper
 import time
+
+# Whisper is optional; only required when whisper_enabled is True in config
+whisper = None
 
 class AudioMonitor:
     def __init__(self, config):
@@ -16,9 +18,17 @@ class AudioMonitor:
         self.audio_buffer = deque(maxlen=15)  # 480ms buffer
         self.alert_system = None
         self.alert_logger = None
-        
-        if self.config['whisper_enabled']:
-            self.whisper_model = whisper.load_model(self.config['whisper_model'])
+        self.whisper_model = None
+
+        if self.config.get('whisper_enabled', False):
+            try:
+                import whisper as _whisper
+                globals()['whisper'] = _whisper
+                self.whisper_model = _whisper.load_model(self.config.get('whisper_model', 'tiny.en'))
+            except ImportError:
+                if self.alert_logger is None:
+                    import sys
+                    print("Warning: openai-whisper not installed. Set whisper_enabled: false in config or run: pip install openai-whisper", file=sys.stderr)
         
     def start(self):
         """Start audio monitoring thread"""
@@ -86,6 +96,8 @@ class AudioMonitor:
     
     def _process_with_whisper(self):
         """Optional Whisper processing"""
+        if self.whisper_model is None:
+            return
         try:
             audio = np.concatenate(self.audio_buffer)
             result = self.whisper_model.transcribe(

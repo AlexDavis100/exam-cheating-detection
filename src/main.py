@@ -84,6 +84,7 @@ def main():
     if config['detection']['audio_monitoring']:
         audio_monitor.start()
 
+    cap = None
     try:
         if config['screen']['recording']:
             screen_recorder.start_recording()
@@ -210,12 +211,12 @@ def main():
         print(f"Report generated: {report_path}")
         if config['screen']['recording']:
             screen_data = screen_recorder.stop_recording()
-            print(f"Screen recording saved: {screen_data['filename']}")
-        
+            if screen_data and isinstance(screen_data, dict):
+                print(f"Screen recording saved: {screen_data.get('filename', 'N/A')}")
         video_data = video_recorder.stop_recording()
-        print(f"Webcam recording saved: {video_data['filename']}")
-        
-        if cap.isOpened():
+        if video_data and isinstance(video_data, dict):
+            print(f"Webcam recording saved: {video_data.get('filename', 'N/A')}")
+        if cap is not None and cap.isOpened():
             cap.release()
         cv2.destroyAllWindows()
 
